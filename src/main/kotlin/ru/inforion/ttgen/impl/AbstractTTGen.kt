@@ -1,4 +1,4 @@
-package ru.inforion.ttgen.general
+package ru.inforion.ttgen.impl
 
 import org.apache.log4j.Logger
 import java.lang.Exception

@@ -2,6 +2,8 @@ package ru.inforion.ttgen.general
 
 import org.apache.log4j.LogManager
 import org.hibernate.cfg.Environment
+import ru.inforion.ttgen.impl.AbstractTTGen
+import ru.inforion.ttgen.impl.AutoTTGen
 import kotlin.system.exitProcess
 
 
@@ -23,8 +25,16 @@ fun main(args: Array<String>) {
         Environment.JPA_JDBC_PASSWORD to "AUTO_TIMETABLE_NEW"
     )
 
-    val autoTTGen = AutoTTGen(logger, props)
-    autoTTGen.run()
+    try {
+        val autoTTGen = AutoTTGen(logger, props)
+        autoTTGen.run()
+    } catch (e : Exception) {
+        logger.error("Ошибка работы генератора АВТО расписаний. ", e)
+    }
+
+    // TODO Ship
+
+    // TODO Rail
 
     exitProcess(0)
 }
