@@ -1,10 +1,9 @@
 package ru.inforion.ttgen.impl
 
 import org.apache.log4j.Logger
-import ru.inforion.egis.auto.timetable.database.v2.Timetable
 import ru.inforion.egis.commons.data.validator.impl.ValidationConstants
-import ru.inforion.egis.commons.utils.CalendarConverter
 import ru.inforion.egis.commons.utils.Calendars
+import ru.inforion.ttgen.entities.auto.Timetable
 import java.util.*
 import javax.persistence.EntityManagerFactory
 import javax.persistence.Persistence
@@ -12,9 +11,9 @@ import javax.persistence.Persistence
 class AutoTTGen(override val logger: Logger, props: Map<String, String?>) : AbstractTTGen() {
     override fun regenDM(timetable: Any, year: Int) {
         val tt = timetable as Timetable
-        val yc = CalendarConverter.abstractToYear(CalendarConverter.getCalendar(tt.origDaymask), year)
-        tt.daymask = yc.daymask
-        tt.dmYear = yc.dmyear!!
+//        val yc = CalendarConverter.abstractToYear(CalendarConverter.getCalendar(tt.origDaymask), year)
+//        tt.daymask = yc.daymask
+//        tt.dmYear = yc.dmyear!!
     }
 
     override val ttClass: Class<*>

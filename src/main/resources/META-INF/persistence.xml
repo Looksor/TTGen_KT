@@ -5,10 +5,10 @@
 	<persistence-unit name="AUTO_TIMETABLE_V2_PU_TTGEN" transaction-type="JTA">
 		<provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
 		<jta-data-source>java:jboss/jdbc/egis-otb/databases/xa/tech/auto/timetable-new</jta-data-source>
-		<class>ru.inforion.egis.auto.timetable.database.v2.RoutePoint</class>
-		<class>ru.inforion.egis.auto.timetable.database.v2.Timetable</class>
-		<class>ru.inforion.egis.auto.timetable.database.v2.ActualTimetableShort</class>
-		<class>ru.inforion.egis.commons.database.TimetableGenInfo</class>
+		<class>ru.inforion.ttgen.entities.auto.RoutePoint</class>
+		<class>ru.inforion.ttgen.entities.auto.Timetable</class>
+		<class>ru.inforion.ttgen.entities.auto.ActualTimetableShort</class>
+		<class>ru.inforion.ttgen.entities.TimetableGenInfo</class>
 		<properties>
 			<property name="hibernate.dialect" value="org.hibernate.dialect.PostgreSQL94Dialect"/>
 			<property name="jboss.as.jpa.providerModule" value="org.hibernate:5.2.1.Final"/>
@@ -18,49 +18,6 @@
 			          value="org.hibernate.transaction.JBossTransactionManagerLookup"/>
 			<property name="jboss.entity.manager.factory.jndi.name"
 			          value="java:/AUTO_TIMETABLE_V2_PU_WRITE_entity_manager"/>
-			<property name="hibernate.cache.use_second_level_cache" value="false"/>
-		</properties>
-	</persistence-unit>
-
-	<persistence-unit name="RAIL_TIMETABLE_V2_PU_TTGEN" transaction-type="JTA">
-		<provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
-		<jta-data-source>java:jboss/jdbc/egis-otb/databases/xa/tech/rail/timetable-new</jta-data-source>
-		<class>ru.inforion.egis.rail.timetable.database.v2.Timetable</class>
-		<class>ru.inforion.egis.rail.timetable.database.v2.RoutePoint</class>
-		<class>ru.inforion.egis.rail.timetable.database.v2.ActualTimetableShort</class>
-		<class>ru.inforion.egis.commons.database.TimetableGenInfo</class>
-		<exclude-unlisted-classes>true</exclude-unlisted-classes>
-		<properties>
-			<property name="hibernate.dialect" value="org.hibernate.dialect.PostgreSQL94Dialect"/>
-			<property name="jboss.as.jpa.providerModule" value="org.hibernate:5.2.1.Final"/>
-			<property name="hibernate.transaction.factory_class"
-			          value="org.hibernate.transaction.JTATransactionFactory"/>
-			<property name="hibernate.transaction.manager_lookup_class"
-			          value="org.hibernate.transaction.JBossTransactionManagerLookup"/>
-			<property name="jboss.entity.manager.factory.jndi.name"
-			          value="java:/RAIL_TIMETABLE_V2_PU_WRITE_entity_manager"/>
-			<property name="hibernate.cache.use_second_level_cache" value="false"/>
-			<property name="hibernate.show_sql" value="true"/>
-			<property name="hibernate.format_sql" value="true"/>
-		</properties>
-	</persistence-unit>
-
-	<persistence-unit name="SHIP_TIMETABLE_V2_PU_WRITE" transaction-type="JTA">
-		<provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
-		<jta-data-source>java:jboss/jdbc/egis-otb/databases/xa/tech/ship/timetable-new</jta-data-source>
-		<class>ru.inforion.egis.ship.timetable.database.v2.RoutePoint</class>
-		<class>ru.inforion.egis.ship.timetable.database.v2.Timetable</class>
-		<class>ru.inforion.egis.ship.timetable.database.v2.ActualTimetableShort</class>
-		<class>ru.inforion.egis.commons.database.TimetableGenInfo</class>
-		<properties>
-			<property name="hibernate.dialect" value="org.hibernate.dialect.PostgreSQL94Dialect"/>
-			<property name="jboss.as.jpa.providerModule" value="org.hibernate:5.2.1.Final"/>
-			<property name="hibernate.transaction.factory_class"
-			          value="org.hibernate.transaction.JTATransactionFactory"/>
-			<property name="hibernate.transaction.manager_lookup_class"
-			          value="org.hibernate.transaction.JBossTransactionManagerLookup"/>
-			<property name="jboss.entity.manager.factory.jndi.name"
-			          value="java:/SHIP_TIMETABLE_V2_PU_WRITE_entity_manager"/>
 			<property name="hibernate.cache.use_second_level_cache" value="false"/>
 		</properties>
 	</persistence-unit>
