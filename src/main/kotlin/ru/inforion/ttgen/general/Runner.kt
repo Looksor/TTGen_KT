@@ -17,6 +17,19 @@ fun main(args: Array<String>) {
 
     val jdbcUrl = args[0]
 
+    var threadCount = -1
+    var railLogin = "RAIL_TIMETABLE_NEW"
+    var railPassword = "RAIL_TIMETABLE_NEW"
+
+    when(args.size) {
+        2 -> try {
+            val inputThreadCount = args[1].toInt()
+            threadCount = if (inputThreadCount in 1..9) inputThreadCount else -1
+        } catch (e : NumberFormatException) {
+            logger.warn("Неверный формат количества потоков, установлен автоматический выбор")
+        }
+    }
+
     val props = mapOf(
         Environment.JPA_TRANSACTION_TYPE to "RESOURCE_LOCAL",
         Environment.JPA_JDBC_URL to jdbcUrl,
@@ -26,7 +39,7 @@ fun main(args: Array<String>) {
     )
 
     try {
-        val autoTTGen = AutoTTGen(logger, props)
+        val autoTTGen = AutoTTGen(logger, threadCount, props)
         autoTTGen.run()
     } catch (e : Exception) {
         logger.error("Ошибка работы генератора АВТО расписаний. ", e)

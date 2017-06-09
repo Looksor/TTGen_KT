@@ -19,7 +19,7 @@ abstract class AbstractTTGen {
             deleteGenInfoInactive()
             addGenInfo()
             val list = getGenInfo()
-            println(list.size)
+            startGenerate(list)
         } catch (e : InnerTTGenException) {
             logError("Ошибка работы генератора, ", e.cause)
         }
@@ -118,6 +118,10 @@ abstract class AbstractTTGen {
 
         logInfo("Расписаний для обновления: " + genInfoList.size)
         return genInfoList
+    }
+
+    private fun startGenerate(atts : List<TimetableGenInfo>) {
+        println(threadCount)
     }
 
 //
@@ -270,6 +274,7 @@ abstract class AbstractTTGen {
 
     abstract fun regenDM(timetable: Any, year: Int)
 
+    abstract val threadCount : Int
     abstract val lastgenMin: Calendar
     abstract val lastgenMax: Calendar
     abstract val segment : String

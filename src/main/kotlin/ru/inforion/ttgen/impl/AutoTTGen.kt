@@ -8,7 +8,9 @@ import java.util.*
 import javax.persistence.EntityManagerFactory
 import javax.persistence.Persistence
 
-class AutoTTGen(override val logger: Logger, props: Map<String, String?>) : AbstractTTGen() {
+class AutoTTGen(override val logger: Logger,
+                override val threadCount: Int,
+                props: Map<String, String?>) : AbstractTTGen() {
     override fun regenDM(timetable: Any, year: Int) {
         val tt = timetable as Timetable
 //        val yc = CalendarConverter.abstractToYear(CalendarConverter.getCalendar(tt.origDaymask), year)
