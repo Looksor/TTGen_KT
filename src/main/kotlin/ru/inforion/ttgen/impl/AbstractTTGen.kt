@@ -1,7 +1,8 @@
 package ru.inforion.ttgen.impl
 
 import org.apache.log4j.Logger
-import ru.inforion.egis.datatypes.helpers.RecordStatusConverter
+import ru.inforion.ttgen.entities.TimetableGenInfo
+import ru.inforion.ttgen.utils.RecordStatus
 import java.lang.Exception
 import java.util.*
 import javax.persistence.EntityManager
@@ -17,7 +18,8 @@ abstract class AbstractTTGen {
             updateStatus()
             deleteGenInfoInactive()
             addGenInfo()
-            // TODO FF
+            val list = getGenInfo()
+            println(list.size)
         } catch (e : InnerTTGenException) {
             logError("Ошибка работы генератора, ", e.cause)
         }
@@ -29,8 +31,8 @@ abstract class AbstractTTGen {
         val et = em.transaction
         val query = em.createQuery("update $tableName x set x.status = :old " +
                 "where x.status = :active and x.actualTo < :today")
-        query.setParameter("old", RecordStatusConverter.OLD)
-        query.setParameter("active", RecordStatusConverter.ACTIVE)
+        query.setParameter("old", RecordStatus.OLD)
+        query.setParameter("active", RecordStatus.ACTIVE)
         query.setParameter("today", today)
 
         try {
@@ -51,7 +53,7 @@ abstract class AbstractTTGen {
         val deleteQuery = em.createQuery("delete from TimetableGenInfo x " +
                 "where x.ttid in (select y.id from $tableName y " +
                 "where y.status = :deleted or DATE(y.actualTo) < DATE(:minGen))")
-        deleteQuery.setParameter("deleted", RecordStatusConverter.DELETED)
+        deleteQuery.setParameter("deleted", RecordStatus.DELETED)
         deleteQuery.setParameter("minGen", lastgenMin, TemporalType.TIMESTAMP)
 
         try {
@@ -78,8 +80,8 @@ abstract class AbstractTTGen {
                 "(x.status = :activeStatus or (x.status = :oldStatus and x.actualTo > :minGen)) " +
                 "and not (x.id in (select y.ttid from TimetableGenInfo y))")
 
-        createQuery.setParameter("activeStatus", RecordStatusConverter.ACTIVE)
-        createQuery.setParameter("oldStatus", RecordStatusConverter.OLD)
+        createQuery.setParameter("activeStatus", RecordStatus.ACTIVE)
+        createQuery.setParameter("oldStatus", RecordStatus.OLD)
         createQuery.setParameter("minGen", lastgenMin)
 
         try {
@@ -97,6 +99,170 @@ abstract class AbstractTTGen {
             throw InnerTTGenException(e)
         }
     }
+
+    private fun getGenInfo() : List<TimetableGenInfo> {
+        val genInfoList: List<TimetableGenInfo>
+        val em : EntityManager = emf.createEntityManager()
+        val selectQuery = em.createQuery("select x from TimetableGenInfo x " +
+                "inner join $tableName y on x.ttid = y.id " +
+                "where y.actualTo > x.lastGenerated and x.lastGenerated < :maxGen",
+                TimetableGenInfo::class.java)
+        selectQuery.setParameter("maxGen", lastgenMax)
+
+        try {
+            genInfoList = selectQuery.resultList
+        } catch (e: Exception) {
+            logError("Не удалось получить информацию для генерации расписаний")
+            throw InnerTTGenException(e)
+        }
+
+        logInfo("Расписаний для обновления: " + genInfoList.size)
+        return genInfoList
+    }
+
+//
+//    /**
+//     * Generates ACT_TT for every TTID in list
+//
+//     * @param genInfoList - list of TTID's
+//     * *
+//     * @throws GeneratorException() - wrapper for _cause Exception
+//     */
+//    private fun generateFactTT(genInfoList: List<TimetableGenInfo>) {
+//        if (genInfoList.isEmpty()) return
+//
+//        _em.clear()
+//        var et = _em.getTransaction()
+//        var countUpd = 0
+//        var countAdded = 0
+//        var lockErrors = 0
+//
+//        val updatedInfo = ArrayList()
+//
+//        var lockQueryInfo = _em.createNativeQuery("SELECT * FROM \"ATT_GEN_INFO\" " + "WHERE \"TTID\" = ?",
+//                TimetableGenInfo::class.java)
+//        var lockQueryTT = _em.createNativeQuery("SELECT * FROM \"TIMETABLE\" " + "WHERE \"TTID\" = ?",
+//                getTimetableClass())
+//
+//        try {
+//            et.begin()
+//            for (ttgi in genInfoList) {
+//                countUpd++
+//
+//                lockQueryInfo.setParameter(1, ttgi.getTtid())
+//                lockQueryTT.setParameter(1, ttgi.getTtid())
+//                try {
+//                    ttgi = lockQueryInfo.getSingleResult() as TimetableGenInfo  // lock
+//                } catch (e: Exception) {
+//                    lockErrors++
+//                    continue
+//                }
+//
+//                var tt = lockQueryTT.getSingleResult() as ITimetable
+//
+//                var c = ttgi.getLastGenerated().clone()
+//                if (c.before(_lastgenMin)) c = _lastgenMin.clone() as Calendar
+//
+//                var maxActual = tt.getActualTo()
+//                if (maxActual.after(_lastgenMax)) maxActual = _lastgenMax.clone() as Calendar
+//
+//                val departTime = tt.getDepartTime()
+//
+//                // for first day (skip if depart < actualFrom)
+//                if (c.before(maxActual) && (c.get(Calendar.HOUR_OF_DAY) > departTime.get(Calendar.HOUR_OF_DAY) || c.get(Calendar.HOUR_OF_DAY) == departTime.get(Calendar.HOUR_OF_DAY) && c.get(Calendar.MINUTE) > departTime.get(Calendar.MINUTE))) {
+//                    c.add(Calendar.DATE, 1)
+//                    c.set(Calendar.HOUR_OF_DAY, 0)
+//                    c.set(Calendar.MINUTE, 0)
+//                    c.get(Calendar.DATE)
+//                }
+//
+//                while (c.before(maxActual)) {
+//
+//                    if (tt.getDmYear() !== c.get(Calendar.YEAR)) {
+//                        regenDaymask(tt, c.get(Calendar.YEAR))
+//                        tt = _em.merge(tt)
+//                    }
+//
+//                    var createFact = false
+//                    // last day
+//                    if (c.get(Calendar.MONTH) == maxActual.get(Calendar.MONTH) && c.get(Calendar.DATE) == maxActual.get(Calendar.DATE)) {
+//                        if (maxActual.get(Calendar.HOUR_OF_DAY) > departTime.get(Calendar.HOUR_OF_DAY) || maxActual.get(Calendar.HOUR_OF_DAY) == departTime.get(Calendar.HOUR_OF_DAY) && maxActual.get(Calendar.MINUTE) > departTime.get(Calendar.MINUTE)) {
+//                            createFact = true  // create for last day
+//                        }
+//                    } else
+//                        createFact = true   // create for common day
+//
+//                    if (createFact && tt.getDaymask().charAt(Calendars.getDOY(c)) === '1') {
+//                        _em.persist(getATS(departTime, c, tt))
+//                        countAdded++
+//                    }
+//
+//                    c.add(Calendar.DATE, 1)
+//                }
+//
+//                if (c.after(maxActual)) {
+//                    c = maxActual
+//                    c.get(Calendar.DATE)
+//                }
+//
+//                ttgi.setLastGenerated(c)
+//                updatedInfo.add(ttgi)
+//                _em.merge(ttgi)
+//                _em.flush()
+//
+//                if (updatedInfo.size >= 200) {
+//                    et.commit()
+//                    val percent = countUpd.toDouble() / genInfoList.size.toDouble() * 100
+//                    logInfo("Промежуточный коммит. Обновлено информации: (" + String.format("%.1f", percent) + "%)" +
+//                            " {Upd : " + countUpd + " Add : " + countAdded + " lockErr : " + lockErrors + " }")
+//
+//                    updatedInfo.clear()
+//                    _em.clear()
+//                    _em = _emf.createEntityManager()
+//                    lockQueryInfo = _em.createNativeQuery(
+//                            "SELECT * FROM \"ATT_GEN_INFO\" WHERE \"TTID\" = ?", TimetableGenInfo::class.java)
+//                    lockQueryTT = _em.createNativeQuery(
+//                            "SELECT * FROM \"TIMETABLE\" WHERE \"TTID\" = ?", getTimetableClass())
+//                    et = _em.getTransaction()
+//                    et.begin()
+//                }
+//            }
+//            et.commit()
+//            _em.clear()
+//
+//            logInfo("Завершение обновления. Обновлено информации: (100.0%)")
+//            logInfo("Обновлено расписаний: " + countUpd)
+//            logInfo("Ошибок получения блокировки:" + lockErrors)
+//            logInfo("Добавлено фактических расписаний: " + countAdded)
+//        } catch (e: Exception) {
+//            logError("Сбой работы с БД в процессе обновления")
+//            try {
+//                et.rollback()
+//            } catch (ex: Exception) {
+//                logError(_segment + "Ошибка отката транзакции")
+//            }
+//
+//            e.printStackTrace()
+//            throw GeneratorException(e)
+//        }
+//
+//    }
+//
+//    private fun getATS(depart: Calendar, current: Calendar, tt: ITimetable): IActualTimetableShort {
+//        val departActual = depart.clone() as Calendar
+//
+//        departActual.set(Calendar.YEAR, current.get(Calendar.YEAR))
+//        departActual.set(Calendar.MONTH, current.get(Calendar.MONTH))
+//        departActual.set(Calendar.DATE, current.get(Calendar.DATE))
+//        departActual.get(Calendar.MILLISECOND)
+//
+//        val ats = tt.getATS()
+//        ats.setTtid(tt)
+//        ats.setRouteDate(departActual)
+//
+//        return ats
+//    }
+
 
     fun logInfo(str : String) : Unit = logger.info("[$segment] $str")
     fun logError(str : String) : Unit = logger.error("[$segment] $str")

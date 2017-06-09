@@ -69,8 +69,4 @@ class Timetable {
     
     @OneToMany(mappedBy = "ttid")
     private var routePoints: List<RoutePoint> = java.util.ArrayList()
-
-    @Transient
-    private var source: ru.egis_otb.data.timetable.Timetable? = null
-
 }
