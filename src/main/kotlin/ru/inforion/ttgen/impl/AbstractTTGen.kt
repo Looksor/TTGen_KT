@@ -2,7 +2,7 @@ package ru.inforion.ttgen.impl
 
 import org.apache.log4j.Logger
 import ru.inforion.ttgen.entities.TimetableGenInfo
-import ru.inforion.ttgen.utils.RecordStatus
+import ru.inforion.ttgen.utils.Utilities
 import java.lang.Exception
 import java.util.*
 import javax.persistence.EntityManager
@@ -31,8 +31,8 @@ abstract class AbstractTTGen {
         val et = em.transaction
         val query = em.createQuery("update $tableName x set x.status = :old " +
                 "where x.status = :active and x.actualTo < :today")
-        query.setParameter("old", RecordStatus.OLD)
-        query.setParameter("active", RecordStatus.ACTIVE)
+        query.setParameter("old", Utilities.STATUS_OLD)
+        query.setParameter("active", Utilities.STATUS_ACTIVE)
         query.setParameter("today", today)
 
         try {
@@ -53,7 +53,7 @@ abstract class AbstractTTGen {
         val deleteQuery = em.createQuery("delete from TimetableGenInfo x " +
                 "where x.ttid in (select y.id from $tableName y " +
                 "where y.status = :deleted or DATE(y.actualTo) < DATE(:minGen))")
-        deleteQuery.setParameter("deleted", RecordStatus.DELETED)
+        deleteQuery.setParameter("deleted", Utilities.STATUS_DELETED)
         deleteQuery.setParameter("minGen", lastgenMin, TemporalType.TIMESTAMP)
 
         try {
@@ -80,8 +80,8 @@ abstract class AbstractTTGen {
                 "(x.status = :activeStatus or (x.status = :oldStatus and x.actualTo > :minGen)) " +
                 "and not (x.id in (select y.ttid from TimetableGenInfo y))")
 
-        createQuery.setParameter("activeStatus", RecordStatus.ACTIVE)
-        createQuery.setParameter("oldStatus", RecordStatus.OLD)
+        createQuery.setParameter("activeStatus", Utilities.STATUS_ACTIVE)
+        createQuery.setParameter("oldStatus", Utilities.STATUS_OLD)
         createQuery.setParameter("minGen", lastgenMin)
 
         try {
