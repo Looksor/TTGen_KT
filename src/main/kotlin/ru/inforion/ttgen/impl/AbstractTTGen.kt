@@ -6,6 +6,7 @@ import ru.inforion.ttgen.utils.Utilities
 import ru.inforion.ttgen.utils.Utilities.batch
 import java.lang.Exception
 import java.util.*
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import javax.persistence.EntityManager
 import javax.persistence.EntityManagerFactory
@@ -20,8 +21,8 @@ abstract class AbstractTTGen {
             updateStatus()
             deleteGenInfoInactive()
             addGenInfo()
-            val list = getGenInfo()
-            if (list.isEmpty()) return else startGenerate(list)
+            val genInfoList = getGenInfo()
+            if (genInfoList.isEmpty()) return else startGenerate(genInfoList)
         } catch (e : InnerTTGenException) {
             logError("Ошибка работы генератора, ", e.cause)
         }
@@ -122,36 +123,40 @@ abstract class AbstractTTGen {
         return genInfoList
     }
 
-    private fun startGenerate(atts : List<TimetableGenInfo>) {
-        val threadCount = if (threadCount == -1) countThreads(atts.size) else threadCount
-        logInfo("Размер пакета обновлений [$atts.size], установлено потоков [$threadCount]")
-        val batchSize = atts.size / threadCount
-        val split = atts.asSequence().batch(batchSize).toList()
+    private fun startGenerate(genInfoList: List<TimetableGenInfo>) {
+        val threadCount = if (threadCount == -1) countThreads(genInfoList.size) else threadCount
+        logInfo("Размер пакета обновлений [$genInfoList.size], установлено потоков [$threadCount]")
+        if (threadCount == 1) generateFactTT(genInfoList) else initializePool(genInfoList, threadCount)
+    }
+
+    private fun initializePool(genInfoList: List<TimetableGenInfo>, threadCount : Int) {
+        val batchSize = genInfoList.size / threadCount
+        val split = genInfoList.asSequence().batch(batchSize).toList()
         val executor = Executors.newFixedThreadPool(threadCount)
+        val latch = CountDownLatch(threadCount)
         split.forEach { g -> executor.execute { generateFactTT(g) } }
         executor.shutdown()
         try {
             logInfo("Ожидание завершения работы потоков")
+            latch.await()
         } catch (e : InterruptedException) {
             logError("Ошибка ожидания завершения работы потоков", e)
         }
     }
 
     private fun generateFactTT(genInfoList: List<TimetableGenInfo>) {
+        val em = emf.createEntityManager()
+        val lockQueryInfo = em.createNativeQuery("SELECT * FROM \"ATT_GEN_INFO\" " + "WHERE \"TTID\" = ?",
+                TimetableGenInfo::class.java)
+        val lockQueryTT = em.createNativeQuery("SELECT * FROM \"TIMETABLE\" " + "WHERE \"TTID\" = ?",
+                ttClass)
+        val tName = Thread.currentThread().name
 
+        var countUpd = 0
+        var countAdded = 0
+        var lockErrors = 0
 
-//        _em.clear()
-//        var et = _em.getTransaction()
-//        var countUpd = 0
-//        var countAdded = 0
-//        var lockErrors = 0
-//
-//        val updatedInfo = ArrayList()
-//
-//        var lockQueryInfo = _em.createNativeQuery("SELECT * FROM \"ATT_GEN_INFO\" " + "WHERE \"TTID\" = ?",
-//                TimetableGenInfo::class.java)
-//        var lockQueryTT = _em.createNativeQuery("SELECT * FROM \"TIMETABLE\" " + "WHERE \"TTID\" = ?",
-//                getTimetableClass())
+        logInfo(tName, "Начало работы потока")
 //
 //        try {
 //            et.begin()
@@ -280,9 +285,10 @@ abstract class AbstractTTGen {
         return 5
     }
 
-    fun logInfo(str : String) : Unit = logger.info("[$segment] $str")
-    fun logError(str : String) : Unit = logger.error("[$segment] $str")
-    fun logError(str : String, e : Exception) : Unit = logger.error("[$segment] $str", e)
+    fun logInfo(str : String) = logger.info("[$segment] $str")
+    fun logInfo(thread : String, str: String) = logger.info("[$segment]-[$thread] $str")
+    fun logError(str : String) = logger.error("[$segment] $str")
+    fun logError(str : String, e : Exception) = logger.error("[$segment] $str", e)
 
     abstract fun regenDM(timetable: Any, year: Int)
 
