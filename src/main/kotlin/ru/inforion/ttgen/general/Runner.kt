@@ -24,7 +24,7 @@ fun main(args: Array<String>) {
     when(args.size) {
         2 -> try {
             val inputThreadCount = args[1].toInt()
-            threadCount = if (inputThreadCount in 1..9) inputThreadCount else -1
+            threadCount = if (inputThreadCount in 1..5) inputThreadCount else -1
         } catch (e : NumberFormatException) {
             logger.warn("Неверный формат количества потоков, установлен автоматический выбор")
         }

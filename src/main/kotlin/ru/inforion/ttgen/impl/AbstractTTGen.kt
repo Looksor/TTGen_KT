@@ -3,8 +3,10 @@ package ru.inforion.ttgen.impl
 import org.apache.log4j.Logger
 import ru.inforion.ttgen.entities.TimetableGenInfo
 import ru.inforion.ttgen.utils.Utilities
+import ru.inforion.ttgen.utils.Utilities.batch
 import java.lang.Exception
 import java.util.*
+import java.util.concurrent.Executors
 import javax.persistence.EntityManager
 import javax.persistence.EntityManagerFactory
 import javax.persistence.TemporalType
@@ -19,7 +21,7 @@ abstract class AbstractTTGen {
             deleteGenInfoInactive()
             addGenInfo()
             val list = getGenInfo()
-            startGenerate(list)
+            if (list.isEmpty()) return else startGenerate(list)
         } catch (e : InnerTTGenException) {
             logError("Ошибка работы генератора, ", e.cause)
         }
@@ -121,20 +123,23 @@ abstract class AbstractTTGen {
     }
 
     private fun startGenerate(atts : List<TimetableGenInfo>) {
-        println(threadCount)
+        val threadCount = if (threadCount == -1) countThreads(atts.size) else threadCount
+        logInfo("Размер пакета обновлений [$atts.size], установлено потоков [$threadCount]")
+        val batchSize = atts.size / threadCount
+        val split = atts.asSequence().batch(batchSize).toList()
+        val executor = Executors.newFixedThreadPool(threadCount)
+        split.forEach { g -> executor.execute { generateFactTT(g) } }
+        executor.shutdown()
+        try {
+            logInfo("Ожидание завершения работы потоков")
+        } catch (e : InterruptedException) {
+            logError("Ошибка ожидания завершения работы потоков", e)
+        }
     }
 
-//
-//    /**
-//     * Generates ACT_TT for every TTID in list
-//
-//     * @param genInfoList - list of TTID's
-//     * *
-//     * @throws GeneratorException() - wrapper for _cause Exception
-//     */
-//    private fun generateFactTT(genInfoList: List<TimetableGenInfo>) {
-//        if (genInfoList.isEmpty()) return
-//
+    private fun generateFactTT(genInfoList: List<TimetableGenInfo>) {
+
+
 //        _em.clear()
 //        var et = _em.getTransaction()
 //        var countUpd = 0
@@ -249,9 +254,9 @@ abstract class AbstractTTGen {
 //            e.printStackTrace()
 //            throw GeneratorException(e)
 //        }
-//
-//    }
-//
+
+    }
+
 //    private fun getATS(depart: Calendar, current: Calendar, tt: ITimetable): IActualTimetableShort {
 //        val departActual = depart.clone() as Calendar
 //
@@ -267,6 +272,13 @@ abstract class AbstractTTGen {
 //        return ats
 //    }
 
+    private fun countThreads(i: Int): Int {
+        if (i < 50) return 1
+        if (i < 100) return 2
+        if (i < 400) return 3
+        if (i < 1000) return 4
+        return 5
+    }
 
     fun logInfo(str : String) : Unit = logger.info("[$segment] $str")
     fun logError(str : String) : Unit = logger.error("[$segment] $str")
